@@ -271,6 +271,50 @@
         .n8n-chat-widget .chat-footer a:hover {
             opacity: 1;
         }
+
+        .n8n-chat-widget .loading-indicator {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 12px;
+            margin: 8px 0;
+            align-self: flex-start;
+        }
+
+        .n8n-chat-widget .loading-indicator.active {
+            display: flex;
+        }
+
+        .n8n-chat-widget .loading-dots {
+            display: flex;
+            gap: 4px;
+        }
+
+        .n8n-chat-widget .loading-dots span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--chat--color-primary);
+            opacity: 0.6;
+            animation: loadingDots 1.4s infinite ease-in-out;
+        }
+
+        .n8n-chat-widget .loading-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .n8n-chat-widget .loading-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes loadingDots {
+            0%, 80%, 100% { 
+                transform: scale(0);
+            }
+            40% { 
+                transform: scale(1);
+            }
+        }
     `;
 
     // Load Geist font
@@ -361,7 +405,15 @@
                 <span>${config.branding.name}</span>
                 <button class="close-button">×</button>
             </div>
-            <div class="chat-messages"></div>
+            <div class="chat-messages">
+                <div class="loading-indicator">
+                    <div class="loading-dots">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </div>
+            </div>
             <div class="chat-input">
                 <textarea placeholder="Type your message here..." rows="1"></textarea>
                 <button type="submit">Send</button>
@@ -397,6 +449,11 @@
 
     async function startNewConversation() {
         currentSessionId = generateUUID();
+        const loadingIndicator = chatContainer.querySelector('.loading-indicator');
+        loadingIndicator.classList.add('active');
+        sendButton.disabled = true;
+        textarea.disabled = true;
+
         const data = [{
             action: "loadPreviousSession",
             sessionId: currentSessionId,
@@ -427,10 +484,22 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         } catch (error) {
             console.error('Error:', error);
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'chat-message bot';
+            errorMessage.textContent = 'Sorry, there was an error connecting to the chat service. Please try again.';
+            messagesContainer.appendChild(errorMessage);
+        } finally {
+            loadingIndicator.classList.remove('active');
+            sendButton.disabled = false;
+            textarea.disabled = false;
         }
     }
 
     async function sendMessage(message) {
+        const loadingIndicator = chatContainer.querySelector('.loading-indicator');
+        sendButton.disabled = true;
+        textarea.disabled = true;
+        
         const messageData = {
             action: "sendMessage",
             sessionId: currentSessionId,
@@ -445,6 +514,7 @@
         userMessageDiv.className = 'chat-message user';
         userMessageDiv.textContent = message;
         messagesContainer.appendChild(userMessageDiv);
+        loadingIndicator.classList.add('active');
         messagesContainer.scrollTop = messagesContainer.scrollHeight;
 
         try {
@@ -465,6 +535,14 @@
             messagesContainer.scrollTop = messagesContainer.scrollHeight;
         } catch (error) {
             console.error('Error:', error);
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 'chat-message bot';
+            errorMessage.textContent = 'Sorry, there was an error sending your message. Please try again.';
+            messagesContainer.appendChild(errorMessage);
+        } finally {
+            loadingIndicator.classList.remove('active');
+            sendButton.disabled = false;
+            textarea.disabled = false;
         }
     }
 
